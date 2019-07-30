@@ -2,48 +2,39 @@
 #include <DS3231.h>
 #include <SoftwareSerial.h>
 
-int trig=9,j;
-int echo=8;
-float dist,distance,v,h,t,rate,cp;
-float rates[1000];
+int j,a=1;
+float dist,sl,v,h,cp,rates[50];
 const float ln=20.0,r=10.0;
-String command,instruct;
- 
-//unsigned long  t=getRTCTime();
 
-NewPing orla(trig, echo, 400);
+NewPing orla(9,8,400); // trig, echo
 DS3231 rtc(A4,A5);
 SoftwareSerial gsm(11, 12); // RX, TX
 
-
 void setup() {
-   h=(ln-distance);
-  rate=((distance-dist)/t);
+   //float dist;
+    pinMode(9,OUTPUT);  //trig
+    pinMode(8,INPUT);   //echo
   
   Serial.begin(9600);
   Serial.println("Taking inital mesurements...");
-
-  pinMode(trig,OUTPUT);
-  pinMode(echo,INPUT);
-   gsm.begin(9600);
-   modem_init();
-  data_init();
-  internet_init();
- 
   rtc.begin();
   rtc.setDOW(THURSDAY);
   rtc.setTime(0,0,0);
   rtc.setDate(7,12,2000);
+  
+   gsm.begin(9600);
+   modem_init();
+   data_init();
+   internet_init();
+ 
   Serial.println("input critical point of choice:");
-
-     while (Serial.available() == 0){ }
+    while (Serial.available() == 0){ }
      float in = Serial.parseFloat();
       cp=in;
  
-  
-    digitalWrite(trig,LOW);
+    digitalWrite(9,LOW);
     delayMicroseconds(2);
-    digitalWrite(trig,HIGH);
+    digitalWrite(9,HIGH);
     delayMicroseconds(10);
    dist= orla.ping_cm();
    
@@ -53,7 +44,7 @@ void setup() {
   Serial.println(ln-dist);
   Serial.print("Initial Volume:");
   Serial.println(3.14*r*r*(ln-dist));
-   if(h<=cp){
+   if((ln-dist)<=cp){
     SMS();
     }
    else {Serial.println("The tank is full");}
@@ -65,16 +56,17 @@ void setup() {
 }
 
 void loop() {
-digitalWrite(trig,LOW);
+   call();
+digitalWrite(9,LOW);
 delayMicroseconds(2);
-digitalWrite(trig,HIGH);
+digitalWrite(9,HIGH);
 delayMicroseconds(10);
-  distance=orla.ping_cm();
-   if(distance<dist){distance=dist;}
-   h=(ln-distance);
+  sl=orla.ping_cm();
+   if(sl<dist){sl=dist;}
+   h=(ln-sl);
    v=(3.14*r*r*h);
-  Serial.print("Space Length:");
-  Serial.println(distance);
+  Serial.print("Space length:");
+  Serial.println(sl);
   Serial.print("Water Height:");
   Serial.println(h);
   Serial.print("Volume:");
@@ -90,29 +82,30 @@ delayMicroseconds(10);
   Serial.println();
   Serial.print("InputTime: ");
     while(Serial.available() == 0){ }
-      float tt= Serial.parseFloat();
-        delay(2000); t=tt;
+    delay(5000);
+     float t= Serial.parseFloat();
+         
       Serial.println(t);
      Serial.print("Rate of dispense: ");
-     Serial.print(rate);
-      rates[j]=rate;
-     Serial.println(" metres per second");
-     if(h<=cp){
+     Serial.print((sl-dist)/t);
+      float rate;
+      rates[j]=rate=((sl-dist)/t);
+     Serial.println(" cm per second");
+     if((sl-dist)<=cp){
     SMS();
     }
    else {Serial.println("Water is available");}
-
- Serial.println("Send data to the cloud manually...");
+    send_data();
+ //Serial.println("Send data to the cloud manually...");
  Serial.println();
-  delay(100);
-  for(int i=0;i<12;i++){function();}
- 
-      j++; 
-      send_data();
+ // delay(100);
+  //for(int i=0;i<12;i++){function();}
+       j++; 
+     delay(10000);
 }
 
-void function(){
-  
+/*void function(){
+  String command,instruct;
 while(Serial.available() == 0){}
   command = Serial.readString();
   gsm.println(command);
@@ -121,17 +114,17 @@ while(Serial.available() == 0){}
    instruct = gsm.readString();
    Serial.println(instruct);
  
-  }
+  }*/
   
 void SMS(){
     
-      Serial.print("\r");
+      gsm.print("\r");
       delay(100);
-      Serial.print("AT+CMGF=1\r");
+      gsm.println("AT+CMGF=1\r");
       delay(100);
-      Serial.print("AT+CMGS=\"0784799280\"\r");
+      gsm.println("AT+CMGS=\"0784799280\"\r");
       delay(100);
-      Serial.print("YOUR WATER IS AT CRITICAL LEVEL");
+      gsm.println("YOUR WATER IS AT CRITICAL LEVEL");
       delay(100);
     
     }
@@ -152,58 +145,58 @@ void data_init(){
   gsm.println("AT+CPIN?");
   delay(1000); delay(1000);
   gsm.print("AT+SAPBR=3,1");
-  gsm.write(',');
-  gsm.write('"');
-  gsm.print("contype");
-  gsm.write('"');
-  gsm.write(',');
-  gsm.write('"');
+  gsm.print(',');
+  gsm.print('"');
+  gsm.print("Contype");
+  gsm.print('"');
+  gsm.print(',');
+  gsm.print('"');
   gsm.print("GPRS");
-  gsm.write('"');
-  gsm.write(0x0d);
-  gsm.write(0x0a);
+  gsm.print('"');
+  gsm.print(0x0d);
+  gsm.print(0x0a);
   delay(1000); ;
   gsm.print("AT+SAPBR=3,1");
-  gsm.write(',');
-  gsm.write('"');
+  gsm.print(',');
+  gsm.print('"');
   gsm.print("APN");
-  gsm.write('"');
-  gsm.write(',');
-  gsm.write('"');
+  gsm.print('"');
+  gsm.print(',');
+  gsm.print('"');
   //------------APN------------//
-  gsm.print("MTN-UGANDA"); //APN Here
+  gsm.print("mtn.co.ug"); //APN Here
   //--------------------------//
-  gsm.write('"');
-  gsm.write(0x0d);
-  gsm.write(0x0a);
+  gsm.print('"');
+  gsm.print(0x0d);
+  gsm.print(0x0a);
   delay(1000);
   gsm.print("AT+SAPBR=3,1");
-  gsm.write(',');
-  gsm.write('"');
+  gsm.print(',');
+  gsm.print('"');
   gsm.print("USER");
-  gsm.write('"');
-  gsm.write(',');
-  gsm.write('"');
+  gsm.print('"');
+  gsm.print(',');
+  gsm.print('"');
   gsm.print("  ");
-  gsm.write('"');
-  gsm.write(0x0d);
-  gsm.write(0x0a);
+  gsm.print('"');
+  gsm.print(0x0d);
+  gsm.print(0x0a);
   delay(1000);
   gsm.print("AT+SAPBR=3,1");
-  gsm.write(',');
-  gsm.write('"');
+  gsm.print(',');
+  gsm.print('"');
   gsm.print("PWD");
-  gsm.write('"');
-  gsm.write(',');
-  gsm.write('"');
+  gsm.print('"');
+  gsm.print(',');
+  gsm.print('"');
   gsm.print("  ");
-  gsm.write('"');
-  gsm.write(0x0d);
-  gsm.write(0x0a);
+  gsm.print('"');
+  gsm.print(0x0d);
+  gsm.print(0x0a);
   delay(2000);
   gsm.print("AT+SAPBR=1,1");
-  gsm.write(0x0d);
-  gsm.write(0x0a);
+  gsm.print(0x0d);
+  gsm.print(0x0a);
   delay(3000);
 }
 
@@ -235,12 +228,28 @@ void send_data(){
   //Replace xxxxxxxxxxx with your write API key.
   gsm.print("api.thingspeak.com/update?api_key=WCUL6ADB9MCGM6GM&field1="); 
   //---------------------------------------------------------------//
-  gsm.print(ln); //>>>>>>  variable 1 (temperature)
-  //gsm.print("&field2=");
-  //gsm.print(humi); //>>>>>> variable 2 (Humidity)
-  gsm.write(0x0d);
-  gsm.write(0x0a);
+  gsm.print(h); //>>>>>>  variable 1 
+  gsm.print("&field2=");
+  gsm.print(rates[j]); //>>>>>> variable 2 
+  gsm.print(0x0d);
+  gsm.print(0x0a);
   delay(1000);
   gsm.println("AT+HTTPACTION=0");
   delay(1000);
 }
+ void call(){
+  //int ;
+  if (a==1){
+    Serial.print(a);
+    Serial.println("st Iteration");}
+  else if (a==2){
+    Serial.print(a);
+    Serial.println("nd Iteration");}
+  else if (a==3){
+    Serial.print(a);
+    Serial.println("rd Iteration");}
+  else {
+    Serial.print(a);
+    Serial.println("th Iteration");}
+    a++;
+  }
