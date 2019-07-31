@@ -68,7 +68,7 @@ hr {
   z-index: 2;
   position: relative;
   width: 100%;
-  background-color: #4c69ee;
+  background-color: #000000;
   min-width: 300px;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -76,6 +76,7 @@ hr {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+  opacity: 0.8;
 }
 
 .menu {
